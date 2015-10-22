@@ -1,0 +1,1 @@
+perl -MList::Util=shuffle -E 'say join"",sub{my@x=(shuffle(@_),undef);sub{my($c,@y)=shift;push@y,do{my$d=shift(@x)//do{@x=(shuffle(@x),undef);shift@x};push@x,$d;$d}while$c-->0;@y}}->(split//,"OISZLJT")->(50)'
