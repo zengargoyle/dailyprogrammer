@@ -2,98 +2,84 @@
 use v6;
 constant $DEBUG = %*ENV<DEBUG> // 0;
 
-sub MAIN('test') {
+sub possible-lines($size) {
+  my $lower = gather loop { .take for <0 0 1> }
+  my $upper = gather loop { .take for <1 1 0> }
+  gather TOP:
+  for :2($lower[^$size].join) .. :2($upper[^$size].join) -> $i {
+    my $line = $i.fmt: "\%0{$size}b";
+    for ^$size -> $p {
+      state $ones;
+      state @last = <x x x>;
+      my $o = substr $line, $p, 1;
+      $ones++ if $o eq '1';
+      push @last, $o;
+      next TOP if [eq] @last;
+      LAST { next TOP unless $ones == $size/2 }
+    }
+    take $line;
+  }
+}
+
+sub test-solution(@ps) {
+  gather TOP:
+  for @ps -> @s {
+    my @T = ([Z] @s>>.comb)>>.join;
+    my $size = @T.elems;
+    for @T -> $line {
+      for ^$size -> $p {
+        state $ones = 0;
+        state @last = <x x x>;
+        my $o = substr $line, $p, 1;
+        $ones++ if $o eq '1';
+        push @last, $o;
+        next TOP if [eq] @last;
+        LAST { next TOP unless $ones == $size/2 }
+      }
+    }
+    take @s;
+  }
+}
+
+sub inflate-puzzle(@pl,@in) {
+  @in.map(-> $row {@pl.grep(/<$row>/)});
+}
+
+sub possible-solution(@fl) { gather for [X] @fl { .take } }
+
+
+subset File of Str where { $_.IO ~~ :e & :f };
+
+sub MAIN('test', File(File) :$datfile = "takuzu.dat") {
   use Test;
 
-my @Test = for split /\n\n/ q:to/END/.chomp -> $in, $out { :$in, :$out };
-0.0.
-..0.
-...1
+  my @Tests = slurp($datfile).chomp.split(/\n\n/).map(
+    -> $input, $output { (:$input, :$output).Hash }
+  );
 
-1010
-0101
-1100
-0011
+  for @Tests[^1].kv -> $num, $test {
 
-110...
-1...0.
-..0...
-11..10
-....0.
-......
+    my @in = split /\n/, $test<input>;
+    my $size = @in.elems;
 
-110100
-101100
-010011
-110010
-001101
-001011
+    say "Solving";
+    say $test<input>;
+    say "Size $size";
 
-0....11..0..
-...1...0....
-.0....1...00
-1..1..11...1
-.........1..
-0.0...1.....
-....0.......
-....01.0....
-..00..0.0..0
-.....1....1.
-10.0........
-..1....1..00
+    my @pl = possible-lines($size);
+    my @fl = inflate-puzzle(@pl,@in);
+    my @ps = possible-solution(@fl);
+    my @fs = test-solution(@ps);
+    say "Solutions";
+    my $found;
+    for @fs -> @solution {
+      state $first;
+      $first = say "-" x 20 unless $first;
+      $found = join "\n", @solution;
+      $found.say;
+    }
+    is $found, $test<output>, "pass $num";
+  }
 
-010101101001
-010101001011
-101010110100
-100100110011
-011011001100
-010010110011
-101100101010
-001101001101
-110010010110
-010101101010
-101010010101
-101011010100
-END
-
-my $width = @in[0].chars;
-my $height = @in.elems;
-
-my $lowest-possible = gather loop { .take for <0 0 1> }
-my $highest-possible = gather loop { .take for <1 1 0> }
-
-my $l = join '',  $lowest-possible[^$width];
-my $h = join '',  $highest-possible[^$width];
-
-say "searching $l to $h";
-
-my @x = gather for :2($l)..:2($h) -> $x {
-  my $t = $x.fmt("\%0{$width}b");
-  next if $t ~~ / 000 | 111 /;
-  next unless @($t ~~ m:g/1/).elems == $width / 2;
-  take $t;
-}
-
-my @c = @in.map({my $i = $_; @x.grep(/<$i>/) });
-
-my @try = gather for [X] @c -> @h {
-  next unless @h.Set.elems == $width;
-  take @h;
-}
-
-for @try -> @t {
-  # @t.say;
-  my @T = (zip @t>>.comb)>>.join;
-  # say @T;
-  next if any(@T.map(*.match(/000|111/)));
-  next unless @T.Set.elems == $height;
-  next unless all(@T.map({@(m:g/1/).elems == $height/2 }));
-  # next unless @(@T[0] ~~ m:g/1/).elems == @(@t[0] ~~ m:g/1/).elems;
-  say "solution";
-  say @t.join("\n");
-}
-
-
-  pass "Template";
   done-testing;
 }
