@@ -19,8 +19,8 @@ sub random-words(
   Regex :$match = rx/^<:Letter>+$/,
 ) {
   my @acc = RandomAccumulator.new xx $count;
-  for "/usr/share/dict/words".IO.lines.grep($match)\
-    .grep(*.chars == $length) -> $word {
+  for "/usr/share/dict/words".IO.lines.grep(*.chars == $length)\
+    .grep($match) -> $word {
     .accumulate($word) for @acc;
   }
   @acc.map: *.value;
