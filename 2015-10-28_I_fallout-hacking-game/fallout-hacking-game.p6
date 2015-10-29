@@ -36,7 +36,7 @@ sub MAIN {
 
   repeat {
     $difficulty = prompt("Difficulty (1-5): ");
-  } until 1 <= $difficulty <= 5;
+  } until +$difficulty ~~ Int &&  1 <= $difficulty <= 5;
 
   # first pass at difficulty levels, tweak as desired
   # maybe pick count/length as some function of $difficulty
