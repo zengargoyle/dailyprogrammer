@@ -30,4 +30,10 @@ grammar D {
 my ($dungeon-text, $solution-text) = 'map1.dat'.IO.slurp.split(/^^\-+\n/);
 say $dungeon-text;
 
-say D.new.parse($dungeon-text).made;
+my ($locations, $map) = D.new.parse($dungeon-text).made<locations map>;
+
+sub print-map($map) {
+  say join "\n\n", $map.map: -> $f { join "\n", $f.map: -> $r { $r.join } };
+}
+
+print-map($map);
