@@ -96,16 +96,16 @@ my @stack = $start;
 my %visited = $start => $start;
 my $here;
 
-my $last-floor = $start[0];
+# my $last-floor = $start[0];
 # nc_init;
 # nc_level($map,$last-floor);
 # nc_move($start[1], $start[2]);
 while @stack {
   $here = pop @stack;
-  if $here[0] !== $last-floor {
-    # nc_level($map,$here[0]);
-    $last-floor = $here[0];
-  }
+  # if $here[0] !== $last-floor {
+  #   nc_level($map,$here[0]);
+  #   $last-floor = $here[0];
+  # }
   # nc_move($here[1],$here[2]); sleep 0.9;
   last if at-loc($map,$here) eq 'G';
   for open-steps($map,$here) -> $step {
