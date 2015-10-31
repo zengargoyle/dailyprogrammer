@@ -109,8 +109,8 @@ while @stack {
   # nc_move($here[1],$here[2]); sleep 0.9;
   last if at-loc($map,$here) eq 'G';
   for open-steps($map,$here) -> $step {
-    next if %visited{"$step"}:exists;
-    %visited{"$step"} = $here;
+    next if %visited{~$step}:exists;
+    %visited{~$step} = $here;
     push @stack, $step;
   }
 }
@@ -118,7 +118,7 @@ while @stack {
 # nc_quit;
 
 loop {
-  $here = %visited{"$here"};
+  $here = %visited{~$here};
   last if $here ~~ $start;
   at-loc($map,$here) = '*';
 }
