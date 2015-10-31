@@ -15,4 +15,4 @@ Classification: *E*asy, *I*ntermediate, or *H*ard.
 - 2015-10-23_H_takuzu-solver
 - 2015-10-26_E_consonants-and-vowels
 - 2015-10-28_I_fallout-hacking-game
-
+- 2015-10-30_H_searching-a-dungeon
