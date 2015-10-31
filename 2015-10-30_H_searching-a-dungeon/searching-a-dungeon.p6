@@ -17,7 +17,7 @@ grammar D {
     { make [ $<square>».Str ]; $row++; $col = 0 }
   }
   token square {
-    $<square>=<[\*\h\#SGUD]>
+    $<square>=<[\h\*\#SGUD]>
     {
       if $<square> eq any <S G U D> {
         %locations{$<square>}.push: [$floor,$row,$col];
@@ -27,52 +27,51 @@ grammar D {
   }
 }
 
-my @direction =
-           (-1, 0),
-  ( 0,-1),          ( 0, 1),
-           ( 1, 0)
-;
+my @directions = (-1, 0), (0,-1), (0, 1), (1, 0);
 
 sub print-map($map) {
   say join "\n\n", $map.map: -> $f { join "\n", $f.map: -> $r { $r.join } };
 }
 
+#| for want of @array[@multi]
 sub at-loc($map,$loc) is rw { $map[$loc[0]][$loc[1]][$loc[2]] }
+
 sub make-step($loc,$step) { (@$loc Z+ @$step) }
 
+# only move through U, D, G, and empty
 sub open-steps($map,$loc) {
-  gather for @direction -> $d {
-    my $new = make-step($loc,(0,|@$d));
-    given at-loc($map,$new) {
-      when 'D' { take make-step($new, (1,0,0)) }
-      when 'U' { take make-step($new, (-1,0,0)) }
-      when ' '|'G' { take $new }
+  gather for @directions -> $d {
+    my $next = make-step($loc,(0,|@$d));
+    given at-loc($map,$next) {
+      when 'D' { take make-step($next, (1,0,0)) }
+      when 'U' { take make-step($next, (-1,0,0)) }
+      when ' '|'G' { take $next }
     }
   }
 }
 
-my ($dungeon-text, $solution-text) = 'map1.dat'.IO.slurp.split(/^^\-+\n/);
+my ($dungeon-text, $solution-text) = 'map2.dat'.IO.slurp.split(/^^\-+\n/);
 my ($locations, $map) = D.new.parse($dungeon-text).made<locations map>;
-my @walk;
-sub walk($map,$loc,@path) {
-  my @taken = @path;
-  @taken.push: [ at-loc($map,$loc), $loc ];
-  @walk.push: @taken;
-  at-loc($map,$loc) = 'v';
-  my @new;
-  for open-steps($map,$loc) -> $s {
-    push @new, walk($map,$s,@taken);
+
+my $start = $locations<S>[0];
+my @stack = $start;
+my %visited = $start => $start;
+my $here;
+
+while @stack {
+  $here = pop @stack;
+  last if at-loc($map,$here) eq 'G';
+  for open-steps($map,$here) -> $step {
+    next if %visited{"$step"}:exists;
+    %visited{"$step"} = $here;
+    push @stack, $step;
   }
-  if @new {
-    return [@new.map(|*)];
-  }
-  @taken;
 }
 
-my @path;
-@path = walk($map,$locations<S>[0],[]);
-say "-" x 10;
-for @walk.grep({$_.[*-1][0] eq 'G'}).sort(:by(*.elems)).[0] -> @p {
-  @p.say;
-  print-map($map);
+loop {
+  $here = %visited{"$here"};
+  last if $here ~~ $start;
+  at-loc($map,$here) = '*';
 }
+
+print-map($map);
