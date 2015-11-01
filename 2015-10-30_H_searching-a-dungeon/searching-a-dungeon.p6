@@ -52,8 +52,9 @@ grammar D {
 }
 
 my @directions =
-(-1,-1), (-1,1), (-1,-1), (1,1),
 (-1,0), (1,0), (0,-1), (0,1);
+# (-1,-1), (-1,1), (-1,-1), (1,1),
+# (-1,0), (1,0), (0,-1), (0,1);
 
 sub print-map($map) {
   say join "\n\n", $map.map: -> $f { join "\n", $f.map: -> $r { $r.join } };
@@ -88,35 +89,62 @@ sub open-steps($map,$loc) {
   }
 }
 
-my ($dungeon-text, $solution-text) = 'map2.dat'.IO.slurp.split(/^^\-+\n/);
+my ($dungeon-text, $solution-text) = 'map3.dat'.IO.slurp.split(/^^\-+\n/);
 my ($locations, $map) = D.new.parse($dungeon-text).made<locations map>;
 
-my $start = $locations<S>[0];
+my $start = $locations<S>[0].list;
 my @stack = $start;
 my %visited = $start => $start;
 my $here;
 
-# my $last-floor = $start[0];
-# nc_init;
-# nc_level($map,$last-floor);
-# nc_move($start[1], $start[2]);
+my $last-floor;
+my @found-paths;
+c_save;
+c_hide;
+c_erase;
 while @stack {
   $here = pop @stack;
+  if !$last-floor.defined || $last-floor !== $here[0] {
+    $last-floor = $here[0];
+    c_print-at(0,0,'');
+    print-map($map);
+  }
+  c_blink-at(|$here[1,2], '*');
   # if $here[0] !== $last-floor {
   #   nc_level($map,$here[0]);
   #   $last-floor = $here[0];
   # }
   # nc_move($here[1],$here[2]); sleep 0.9;
-  last if at-loc($map,$here) eq 'G';
+  # last if at-loc($map,$here) eq 'G';
+  if at-loc($map,$here) eq 'G' {
+    my @path = $here;
+    loop {
+      $here = %visited{~$here};
+      push @path, $here;
+      last if $here ~~ $start;
+    }
+    push @found-paths, @path;
+    # @stack = $start;
+    next;
+  }
+  # sleep 0.1;
   for open-steps($map,$here) -> $step {
     next if %visited{~$step}:exists;
     %visited{~$step} = $here;
     push @stack, $step;
   }
 }
+c_restore;
+sub c_save { print "\e7" }
+sub c_restore { print "\e8" }
+sub c_hide { print "\e[8m" }
+sub c_erase { print "\e[2J" }
+sub c_print-at($r,$c,$s) { $r.defined or die; print "\e[{$r+1};{$c+1}H{$s}" }
+sub c_blink-at($r,$c,$s,$ss = ' ') { state ($rr,$cc); if $rr.defined { c_print-at($rr,$cc,$ss); }; $rr = $r; $cc = $c; c_print-at($r,$c,$s); }
 
 # nc_quit;
 
+$here = $locations<G>[0];
 loop {
   $here = %visited{~$here};
   last if $here ~~ $start;
@@ -124,3 +152,4 @@ loop {
 }
 
 print-map($map);
+.say for @found-paths;
