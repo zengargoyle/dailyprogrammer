@@ -55,23 +55,16 @@ sub make-step($loc,$step) { (@$loc Z+ @$step) }
 # and then take in order of distance to travel.
 sub open-steps($map,$loc) {
   my (@cand);
-  gather for @directions -> $d {
+  for @directions -> $d {
     my $next = make-step($loc,(0,|@$d));
     given at-loc($map,$next) {
-      when 'D' { @cand=(); take make-step($next, (1,0,0)) }
-      when 'U' { @cand=(); take make-step($next, (-1,0,0)) }
-      when 'G' { @cand=(); take $next }
-      when ' ' { push @cand, ($next, $d) }
-    }
-    LAST {
-      if @cand {
-        my @c = @cand.sort({
-          $_[1][0]*$_[1][0] + $_[1][1]*$_[1][1]
-        });
-        for @c.map(*.[0]) { .take }
-      }
+      when 'D'|'U'|'G'|' ' { push @cand, ($_,$next) }
     }
   }
+  |@cand.grep(*.[0] eq 'G').map(*.[1]),
+  |@cand.grep(*.[0] eq 'U'|'D').map(*.[1]),
+  |@cand.grep(*.[0] eq ' ').map(*.[1]),
+  ;
 }
 
 my ($dungeon-text, $solution-text) = 'map3.dat'.IO.slurp.split(/^^\-+\n/);
