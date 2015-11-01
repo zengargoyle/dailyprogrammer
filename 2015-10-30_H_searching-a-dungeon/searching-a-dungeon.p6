@@ -1,29 +1,14 @@
 #!/usr/bin/env perl6
 use v6;
 
-# use NCurses;
-# my $win;
-# my @last;
-# my $f;
-# sub nc_init { $win = initscr; die "no ncurses\n" unless $win.defined; }
-# sub nc_level($map,$floor) {
-#   clear;
-#   $f = $map[$floor];
-#   @last = 0, 0, $f[0][0];
-#   for $f.kv -> $i, $r {
-#     mvaddstr( $i, 0, $r.join );
-#   }
-#   nc_refresh;
-# }
-# sub nc_quit {
-#   endwin;
-# }
-# sub nc_move($r,$c) {
-#   mvaddstr( |@last );
-#   @last = $r, $c, $f[$r][$c];
-#   mvaddstr( $r, $c, '*' );
-#   nc_refresh;
-# }
+sub c_save { print "\e7" }
+sub c_restore { print "\e8" }
+sub c_erase { print "\e[2J" }
+sub c_print-at($r,$c,$s) { print "\e[{$r+1};{$c+1}H{$s}" }
+sub c_blink-at($r,$c,$s,$ss = ' ') { state ($rr,$cc);
+  if $rr.defined { c_print-at($rr,$cc,$ss); }; $rr = $r; $cc = $c;
+  c_print-at($r,$c,$s);
+}
 
 grammar D {
   my ($floor,$row,$col) = 0 xx *;
@@ -92,29 +77,28 @@ sub open-steps($map,$loc) {
 my ($dungeon-text, $solution-text) = 'map3.dat'.IO.slurp.split(/^^\-+\n/);
 my ($locations, $map) = D.new.parse($dungeon-text).made<locations map>;
 
-my $start = $locations<S>[0].list;
+my $start = $locations<S>[0];
 my @stack = $start;
 my %visited = $start => $start;
 my $here;
 
 my $last-floor;
 my @found-paths;
+
 c_save;
-c_hide;
 c_erase;
+
 while @stack {
   $here = pop @stack;
+
   if !$last-floor.defined || $last-floor !== $here[0] {
     $last-floor = $here[0];
     c_print-at(0,0,'');
     print-map($map);
   }
-  c_blink-at(|$here[1,2], '*');
-  # if $here[0] !== $last-floor {
-  #   nc_level($map,$here[0]);
-  #   $last-floor = $here[0];
-  # }
-  # nc_move($here[1],$here[2]); sleep 0.9;
+  c_blink-at(|$here[1,2], '*', '*');
+  sleep 0.1;
+
   # last if at-loc($map,$here) eq 'G';
   if at-loc($map,$here) eq 'G' {
     my @path = $here;
@@ -127,22 +111,15 @@ while @stack {
     # @stack = $start;
     next;
   }
-  # sleep 0.1;
+
   for open-steps($map,$here) -> $step {
     next if %visited{~$step}:exists;
     %visited{~$step} = $here;
     push @stack, $step;
   }
 }
-c_restore;
-sub c_save { print "\e7" }
-sub c_restore { print "\e8" }
-sub c_hide { print "\e[8m" }
-sub c_erase { print "\e[2J" }
-sub c_print-at($r,$c,$s) { $r.defined or die; print "\e[{$r+1};{$c+1}H{$s}" }
-sub c_blink-at($r,$c,$s,$ss = ' ') { state ($rr,$cc); if $rr.defined { c_print-at($rr,$cc,$ss); }; $rr = $r; $cc = $c; c_print-at($r,$c,$s); }
 
-# nc_quit;
+c_restore;
 
 $here = $locations<G>[0];
 loop {
